@@ -1,0 +1,45 @@
+# Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation and non-essential files
+*.md
+!README.md
+LICENSE
+
+# Kubernetes manifests
+deploy/
+
+# Test project
+EntraIDSecretRotator.Tests/
+
+# Local development files
+.env
+.env.*
+*.local
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Logs (will be created at runtime)
+*.log
+logs/

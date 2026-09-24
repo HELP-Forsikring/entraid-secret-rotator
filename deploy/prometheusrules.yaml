@@ -1,0 +1,69 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: entraid-secret-rotator
+  namespace: secretrotator
+spec:
+  groups:
+    - name: entraid-secret-rotator
+      interval: 5m
+      rules:
+        - alert: EntraIdRotatorRotationFailed
+          expr: |
+            sum by (app_name, reason) (
+              last_over_time(entraid_rotator_rotation_failed[25h])
+            ) > 0
+          for: 2h
+          labels:
+            severity: critical
+          annotations:
+            description: 'The last rotator run could not rotate {{ $labels.app_name }} (reason {{ $labels.reason }}). Check that the rotator identity owns the app registration, then the Loki stream {namespace="secretrotator"}.'
+            # runbook_url: https://path.to/runbook
+            summary: "Secret rotation failed for {{ $labels.app_name }}"
+
+        - alert: EntraIdSecretExpiresWithin10Days
+          expr: |
+            sum by (app_name, client_id, days_until_expiry) (
+              last_over_time(entraid_rotator_orphan_secrets{pending_deletion!="true", has_healthy_replacement!="true", days_until_expiry=~"^(-[0-9]+|[0-9])$"}[25h])
+            ) > 0
+          for: 2h
+          labels:
+            severity: critical
+          annotations:
+            description: "The secret is not mapped in any Key Vault, so the rotator cannot rotate it. Rotate it by hand, or onboard it by setting the Key Vault content-type and making the rotator identity an owner."
+            # runbook_url: https://path.to/runbook
+            summary: "{{ $labels.app_name }} has a secret expiring in {{ $labels.days_until_expiry }} days and no replacement"
+
+        - alert: EntraIdRotatorManualInterventionRequired
+          expr: |
+            sum by (app_name, client_id) (
+              last_over_time(entraid_rotator_manual_intervention_required[25h])
+            ) > 0
+          for: 2h
+          labels:
+            severity: warning
+          annotations:
+            description: "An expired secret could not be deleted safely because no Key Vault version proves we replaced it. Verify and delete it manually."
+            # runbook_url: https://path.to/runbook
+            summary: "Rotator needs a human for {{ $labels.app_name }}"
+
+        - alert: EntraIdRotatorJobMissing
+          expr: |
+            absent_over_time(entraid_rotator_app_registrations_total[26h])
+          labels:
+            severity: critical
+          annotations:
+            description: "The daily CronJob (07:00 Europe/Oslo, namespace secretrotator) did not run or could not export metrics. Check kubectl get jobs -n secretrotator."
+            # runbook_url: https://path.to/runbook
+            summary: "EntraID Secret Rotator has not reported for 26 hours"
+
+        - alert: EntraIdCronJobFailed
+          expr: |
+            kube_job_status_failed{namespace="secretrotator"} > 0
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            description: "The CronJob for EntraId Secret Rotator failed. Please investigate!"
+            summary: "EntraID Secret Rotator CronJob needs debugging."

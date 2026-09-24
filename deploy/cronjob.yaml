@@ -1,0 +1,49 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: entraid-secret-rotator
+  namespace: secretrotator
+  labels:
+    app.kubernetes.io/component: secret-rotator
+    app.kubernetes.io/instance: entraid-secret-rotator
+    app.kubernetes.io/name: entraid-secret-rotator
+spec:
+  schedule: "0 7 * * *"
+  timeZone: "Europe/Oslo"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/component: secret-rotator
+            app.kubernetes.io/instance: entraid-secret-rotator
+            app.kubernetes.io/name: entraid-secret-rotator
+            azure.workload.identity/use: "true"
+        spec:
+          serviceAccountName: secretrotator-sa
+          restartPolicy: Never
+          containers:
+            - name: entraid-secret-rotator
+              image: "replace/me"
+              args: ["rotate"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  memory: 128Mi
+              env:
+                - name: OTEL_SERVICE_NAME
+                  value: entraid-secret-rotator
+                - name: OTEL_EXPORTER_OTLP_ENDPOINT
+                  value: http://your-otel-collector
+                - name: Rotator__AppFilter
+                  value: "myfilter"
+                - name: Rotator__KeyVaults
+                  value: "key-vault-0,key-vault-1,..."

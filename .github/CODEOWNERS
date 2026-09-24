@@ -1,0 +1,6 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# members of @HELP-Forsikring/DevOps will be requested for
+# review when someone opens a pull request.
+* @HELP-Forsikring/devops
+* @HELP-Forsikring/backend

@@ -26,6 +26,7 @@ spec:
             app.kubernetes.io/name: entraid-secret-rotator
             azure.workload.identity/use: "true"
         spec:
+          automountServiceAccountToken: false
           serviceAccountName: secretrotator-sa
           restartPolicy: Never
           containers:
@@ -47,3 +48,14 @@ spec:
                   value: "myfilter"
                 - name: Rotator__KeyVaults
                   value: "key-vault-0,key-vault-1,..."
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
